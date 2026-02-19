@@ -1,1 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HOLD LIFE Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Tajawal',sans-serif}
+body{background:#070b14;color:#fff}
+header{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;background:#050814;border-bottom:2px solid #3e5fa8}
+.logo-wrap{display:flex;align-items:center;gap:10px}
+.logo{height:55px}
+h1{color:#6f92d6;font-size:26px}
+nav{display:flex;gap:15px}
+nav button{background:#101a33;border:1px solid #3e5fa8;color:#fff;padding:8px 15px;border-radius:8px;cursor:pointer}
+nav button:hover{background:#1a2850}
+.container{max-width:1300px;margin:auto;padding:30px}
+.server-select{background:#0d1428;padding:15px;border-radius:12px;border:1px solid #3e5fa8;margin-bottom:25px}
+select{width:100%;padding:12px;border-radius:10px;border:none;background:#182448;color:#fff}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.card{background:#0d1428;border:1px solid #3e5fa8;border-radius:14px;padding:15px;transition:.3s}
+.card:hover{transform:translateY(-6px);box-shadow:0 0 25px rgba(111,146,214,.35)}
+.card img{width:100%;height:160px;object-fit:cover;border-radius:10px}
+.card h3{margin:10px 0;color:#6f92d6}
+.price{color:#ccc;margin-bottom:10px}
+button.primary{background:#6f92d6;border:none;padding:10px;border-radius:8px;color:#fff;cursor:pointer;width:100%;font-weight:bold}
+button.primary:hover{background:#5578c0}
+.cart{position:fixed;left:20px;bottom:20px;background:#0d1428;border:1px solid #3e5fa8;padding:15px;border-radius:12px;width:280px;max-height:400px;overflow:auto}
+.cart h3{color:#6f92d6;margin-bottom:10px}
+.cart-item{font-size:14px;margin-bottom:6px}
+.admin-panel{display:none;margin-top:40px;background:#0d1428;padding:20px;border-radius:12px;border:1px solid #3e5fa8}
+input{width:100%;padding:10px;margin:8px 0;border-radius:8px;border:none;background:#182448;color:#fff}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center}
+.modal-box{background:#0d1428;padding:25px;border-radius:12px;width:350px;border:1px solid #3e5fa8}
+footer{text-align:center;padding:20px;background:#050814;margin-top:50px;color:#888}
+</style>
+</head>
+<body>
+<header>
+<div class="logo-wrap">
+<img src="logo.png" class="logo" />
+<h1>متجر HOLD LIFE</h1>
+</div>
+<nav>
+<button onclick="openCart()">السلة 🛒</button>
+<button onclick="openAdminLogin()">لوحة الأدمن</button>
+</nav>
+</header>
 
+<div class="container">
+
+<div class="server-select">
+<h3 style="margin-bottom:10px;color:#6f92d6">اختر السيرفر</h3>
+<select id="server">
+<option value="HOLD LIFE #1">HOLD LIFE #1</option>
+<option value="HOLD LIFE #2">HOLD LIFE #2</option>
+</select>
+</div>
+
+<h2 style="margin-bottom:15px;color:#6f92d6">المنتجات (سيارات - رتب - عملات - حزم)</h2>
+<div class="products" id="products"></div>
+
+<div class="admin-panel" id="adminPanel">
+<h2 style="color:#6f92d6">لوحة تحكم الأدمن</h2>
+<input type="text" id="pname" placeholder="اسم المنتج">
+<input type="text" id="pprice" placeholder="السعر">
+<input type="text" id="pimage" placeholder="رابط صورة Discord CDN">
+<input type="text" id="ptype" placeholder="النوع (سيارات / رتب / عملات / حزم)">
+<button class="primary" onclick="addProductDB()">إضافة المنتج لقاعدة البيانات</button>
+</div>
+
+</div>
+
+<div class="cart" id="cart" style="display:none">
+<h3>سلة المشتريات</h3>
+<div id="cartItems"></div>
+<button class="primary" onclick="checkout()">إتمام الطلب</button>
+</div>
+
+<div class="modal" id="loginModal">
+<div class="modal-box">
+<h3>تسجيل دخول الأدمن</h3>
+<input type="password" id="adminPass" placeholder="كلمة المرور">
+<button class="primary" onclick="loginAdmin()">دخول</button>
+</div>
+</div>
+
+<div class="modal" id="orderModal">
+<div class="modal-box">
+<h3>إتمام الطلب</h3>
+<input type="text" id="username" placeholder="اسمك داخل السيرفر">
+<button class="primary" onclick="sendOrder()">إرسال الطلب للدسكورد</button>
+</div>
+</div>
+
+<footer>
+HOLD LIFE ROLEPLAY STORE © جميع الحقوق محفوظة
+</footer>
+
+<script>
+// ====== الإعدادات ======
+const ADMIN_PASSWORD = "123456"; // غيرها
+const webhookURL = "PUT_YOUR_DISCORD_WEBHOOK_HERE";
+const API_DB = "products.json"; // قاعدة بيانات خارجية (JSON أو API)
+
+let products = [];
+let cart = [];
+
+// ====== جلب المنتجات من قاعدة البيانات ======
+async function loadProducts(){
+try{
+const res = await fetch(API_DB);
+products = await res.json();
+}catch{
+products = [];
+}
+renderProducts();
+}
+
+function renderProducts(){
+const container = document.getElementById("products");
+container.innerHTML = "";
+products.forEach((p,i)=>{
+container.innerHTML += `
+<div class="card">
+<img src="${p.image}">
+<h3>${p.name}</h3>
+<div class="price">${p.price}$ | ${p.type}</div>
+<button class="primary" onclick="addToCart(${i})">إضافة للسلة</button>
+</div>`;
+});
+}
+
+// ====== السلة ======
+function addToCart(i){
+cart.push(products[i]);
+updateCart();
+}
+function updateCart(){
+const el = document.getElementById("cartItems");
+el.innerHTML = cart.map(p=>`<div class='cart-item'>${p.name} - ${p.price}$</div>`).join("");
+}
+function openCart(){
+const c = document.getElementById("cart");
+c.style.display = c.style.display === "none" ? "block" : "none";
+}
+
+// ====== تسجيل دخول الأدمن ======
+function openAdminLogin(){
+loginModal.style.display="flex";
+}
+function loginAdmin(){
+if(document.getElementById("adminPass").value === ADMIN_PASSWORD){
+loginModal.style.display="none";
+document.getElementById("adminPanel").style.display="block";
+}else alert("كلمة مرور خاطئة");
+}
+
+// ====== إضافة منتج لقاعدة البيانات (API) ======
+async function addProductDB(){
+const newProduct = {
+name:pname.value,
+price:pprice.value,
+image:pimage.value,
+type:ptype.value
+};
+await fetch(API_DB,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(newProduct)
+});
+alert("تم إرسال المنتج لقاعدة البيانات (تأكد من ربط API)");
+}
+
+// ====== الطلب + ويبهوك دسكورد ======
+function checkout(){
+if(cart.length===0) return alert("السلة فارغة");
+orderModal.style.display="flex";
+}
+
+function sendOrder(){
+const username = document.getElementById("username").value;
+const server = document.getElementById("server").value;
+
+fetch(webhookURL,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+embeds:[{
+title:"طلب متجر HOLD LIFE",
+color:5793266,
+fields:[
+{name:"اسم اللاعب",value:username},
+{name:"السيرفر",value:server},
+{name:"المنتجات",value:cart.map(p=>p.name).join(", ")}
+]
+}]
+})
+});
+
+alert("تم إرسال الطلب للإدارة بنجاح");
+cart=[];
+updateCart();
+orderModal.style.display="none";
+}
+
+loadProducts();
+</script>
+</body>
+</html>
