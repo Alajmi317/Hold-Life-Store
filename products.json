@@ -1,1 +1,15 @@
+[
+  {
+    "name": "رتبة VIP",
+    "price": "50",
+    "image": "https://cdn.discordapp.com/attachments/xxx/vip.png",
+    "type": "رتب"
+  },
+  {
+    "name": "سيارة لامبورغيني",
+    "price": "120",
+    "image": "https://cdn.discordapp.com/attachments/xxx/car.png",
+    "type": "سيارات"
+  }
+]
 
