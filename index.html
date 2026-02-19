@@ -1,53 +1,299 @@
 <!DOCTYPE html>
-// 🔴 حط رابط ويبهوك الدسكورد هنا
-const WEBHOOK_URL = "PUT_YOUR_DISCORD_WEBHOOK_HERE";
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOLD LIFE Store</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0f172a;
+      --secondary: #111827;
+      --accent: #facc15;
+      --card: #1f2937;
+      --text: #ffffff;
+    }
 
-async function loadProducts() {
-  try {
-    const response = await fetch("products.json");
-    const products = await response.json();
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
 
-    const container = document.getElementById("products");
-    container.innerHTML = "";
+    body {
+      background: linear-gradient(135deg, var(--primary), #020617);
+      color: var(--text);
+      min-height: 100vh;
+    }
 
-    products.forEach(product => {
-      const card = document.createElement("div");
-      card.className = "card";
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: rgba(0,0,0,0.4);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
 
-      card.innerHTML = `
-        <img src="${product.image}" alt="${product.name}">
-        <div class="card-content">
-          <div class="product-name">${product.name}</div>
-          <div class="product-price">${product.price} $</div>
-          <button class="buy-btn" onclick="sendOrder('${product.name}', '${product.price}')">
-            شراء المنتج
-          </button>
-        </div>
-      `;
+    .logo { font-size: 28px; font-weight: 700; color: var(--accent); }
 
-      container.appendChild(card);
-    });
+    .lang-btn, .admin-btn {
+      background: var(--accent);
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 10px;
+    }
 
-  } catch (error) {
-    console.error("خطأ تحميل المنتجات:", error);
+    .container { padding: 30px 40px; }
+
+    .categories {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    .cat {
+      background: var(--card);
+      padding: 10px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: 0.3s;
+    }
+
+    .cat:hover, .active { border-color: var(--accent); }
+
+    .products {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: 0.3s;
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .card:hover { transform: translateY(-5px); border-color: var(--accent); }
+
+    .card img { width: 100%; height: 170px; object-fit: cover; }
+
+    .card-body { padding: 15px; }
+
+    .title { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+    .price { color: var(--accent); margin-bottom: 12px; }
+
+    .order-btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      background: var(--accent);
+      color: #000;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+
+    .modal-content {
+      background: #020617;
+      padding: 25px;
+      border-radius: 14px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+      background: #111827;
+      color: white;
+    }
+
+    .submit {
+      margin-top: 15px;
+      background: var(--accent);
+      color: black;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .admin-panel { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">HOLD LIFE STORE</div>
+  <div>
+    <button class="lang-btn" onclick="toggleLang()">EN / AR</button>
+    <button class="admin-btn" onclick="toggleAdmin()">Admin</button>
+  </div>
+</header>
+
+<div class="container" id="store">
+  <div class="categories" id="categories"></div>
+  <div class="products" id="products"></div>
+</div>
+
+<div class="container admin-panel" id="admin">
+  <h2>لوحة التحكم / Admin Panel</h2>
+  <input id="pName" placeholder="اسم المنتج / Product Name">
+  <input id="pPrice" placeholder="السعر / Price">
+  <input id="pImage" placeholder="رابط صورة الدس / Discord Image URL">
+  <input id="pCategory" placeholder="القسم / Category">
+  <button class="submit" onclick="addProduct()">إضافة المنتج / Add Product</button>
+</div>
+
+<div class="modal" id="orderModal">
+  <div class="modal-content">
+    <h3 id="modalTitle">طلب منتج</h3>
+    <input id="playerName" placeholder="اسم اللاعب / Player Name">
+    <input id="discordName" placeholder="ديسكورد / Discord">
+    <textarea id="notes" placeholder="ملاحظات / Notes"></textarea>
+    <button class="submit" onclick="sendOrder()">إرسال الطلب / Send Order</button>
+  </div>
+</div>
+
+<script>
+let lang = 'ar';
+let selectedProduct = null;
+const webhook = "PUT_YOUR_DISCORD_WEBHOOK_HERE";
+
+let products = JSON.parse(localStorage.getItem('products')) || [
+  {
+    name: "VIP Package",
+    price: "10$",
+    image: "https://cdn.discordapp.com/embed/avatars/0.png",
+    category: "Packages"
   }
+];
+
+function saveProducts() {
+  localStorage.setItem('products', JSON.stringify(products));
+  render();
 }
 
-function sendOrder(name, price) {
-  fetch(WEBHOOK_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      content: `🛒 طلب جديد من متجر HOLD LIFE\nالمنتج: ${name}\nالسعر: ${price}$`
-    })
+function render() {
+  const productContainer = document.getElementById('products');
+  const categoriesContainer = document.getElementById('categories');
+
+  const categories = ['All', ...new Set(products.map(p => p.category))];
+
+  categoriesContainer.innerHTML = categories.map(cat =>
+    `<div class="cat" onclick="filterCategory('${cat}')">${cat}</div>`
+  ).join('');
+
+  productContainer.innerHTML = products.map((p, i) => `
+    <div class="card">
+      <img src="${p.image}" />
+      <div class="card-body">
+        <div class="title">${p.name}</div>
+        <div class="price">${p.price}</div>
+        <button class="order-btn" onclick="openOrder(${i})">Order / طلب</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCategory(cat) {
+  const filtered = cat === 'All' ? products : products.filter(p => p.category === cat);
+  document.getElementById('products').innerHTML = filtered.map((p, i) => `
+    <div class="card">
+      <img src="${p.image}" />
+      <div class="card-body">
+        <div class="title">${p.name}</div>
+        <div class="price">${p.price}</div>
+        <button class="order-btn" onclick="openOrder(${i})">Order / طلب</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function openOrder(index) {
+  selectedProduct = products[index];
+  document.getElementById('orderModal').style.display = 'flex';
+}
+
+async function sendOrder() {
+  const player = document.getElementById('playerName').value;
+  const discord = document.getElementById('discordName').value;
+  const notes = document.getElementById('notes').value;
+
+  if (!player || !discord) return alert("املأ البيانات / Fill all fields");
+
+  const payload = {
+    embeds: [{
+      title: "🛒 New Order - HOLD LIFE",
+      color: 16766720,
+      thumbnail: { url: selectedProduct.image },
+      fields: [
+        { name: "Product", value: selectedProduct.name },
+        { name: "Price", value: selectedProduct.price },
+        { name: "Player Name", value: player },
+        { name: "Discord", value: discord },
+        { name: "Notes", value: notes || "None" }
+      ]
+    }]
+  };
+
+  await fetch(webhook, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   });
 
-  alert("تم إرسال الطلب للدسكورد بنجاح");
+  alert("تم إرسال الطلب للديسكورد / Order Sent!");
+  document.getElementById('orderModal').style.display = 'none';
 }
 
-loadProducts();
+function toggleAdmin() {
+  document.getElementById('store').style.display = 'none';
+  document.getElementById('admin').style.display = 'block';
+}
+
+function addProduct() {
+  const name = document.getElementById('pName').value;
+  const price = document.getElementById('pPrice').value;
+  const image = document.getElementById('pImage').value;
+  const category = document.getElementById('pCategory').value || 'General';
+
+  if (!name || !price || !image) return alert("املأ كل الحقول");
+
+  products.push({ name, price, image, category });
+  saveProducts();
+  alert("تمت الإضافة");
+}
+
+function toggleLang() {
+  lang = lang === 'ar' ? 'en' : 'ar';
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+}
+
+render();
 </script>
 
 </body>
